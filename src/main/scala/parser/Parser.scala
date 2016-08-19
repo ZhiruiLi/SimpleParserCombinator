@@ -55,6 +55,14 @@ trait Parsers[Parser[+_]] { self =>
   def or[A](p1: Parser[A], p2: => Parser[A]): Parser[A]
 
   /**
+    * a parser that will always succeed with a given value.
+    * @param a the result value
+    * @tparam A the result type
+    * @return a parser will always succeed
+    */
+  def succeed[A](a: A): Parser[A]
+
+  /**
     * a parser that always fail
     * @return
     */
@@ -186,14 +194,6 @@ trait Parsers[Parser[+_]] { self =>
       a <- pa
       b <- pb
     } yield f(a, b)
-
-  /**
-    * a parser that will always succeed with a given value.
-    * @param a the result value
-    * @tparam A the result type
-    * @return a parser will always succeed
-    */
-  def succeed[A](a: A): Parser[A] = string("") map (_ => a)
 
   /**
     * aliase of succeed

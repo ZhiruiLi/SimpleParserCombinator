@@ -8,8 +8,6 @@ object SimpleParserTypes {
 
   type Parser[+A] = State => Result[A]
 
-  implicit def stringAsState(str: String): State = State(Position(str))
-
   case class State(pos: Position) {
     lazy val currentInput: String = pos.input.substring(pos.offset)
     lazy val fullInput: String = pos.input
@@ -27,9 +25,19 @@ object SimpleParserTypes {
 
 object SimpleParsers extends Parsers[Parser] {
 
-  def run[A](parser: Parser[A])(str: String): Either[ParseError, A] = parser(str) match {
-    case Success(a, _) => Right(a)
-    case Failure(err) => Left(err)
+  def run[A](parser: Parser[A])(str: String): Either[ParseError, A] =
+    parser(State(Position(str))) match {
+      case Success(a, _) => Right(a)
+      case Failure(err) => Left(err)
+    }
+
+  def flatMap[A, B](p: Parser[A])(f: (A) => Parser[B]): Parser[B] = state => {
+    p(state) match {
+      case Success(a, s) =>
+        val newState = state.moveForward(s.length)
+        f(a)(newState)
+      case f@Failure(_) => f
+    }
   }
 
   implicit def string(s: String): Parser[String] = state => {
@@ -55,6 +63,12 @@ object SimpleParsers extends Parsers[Parser] {
     }
   }
 
+  /**
+    * Due to the lack of tail call optimization, the default many and many1 implementation is not efficient.
+    * @param p the parser
+    * @tparam A the return type of the parser
+    * @return a parser of List[A]
+    */
   override def many[A](p: Parser[A]): Parser[List[A]] = {
     def rec(state: State, acc: List[A], consumedLen: Int): (List[A], Int) = p(state) match {
       case Success(a, s) => rec(state.moveForward(s.length), a::acc, consumedLen + s.length)
@@ -96,21 +110,14 @@ object SimpleParsers extends Parsers[Parser] {
     }
   }
 
+  def succeed[A](a: A): Parser[A] = state => Success(a, "")
+
   def failure(msg: String = "always fail"): Parser[Nothing] =
     state => Failure(state.pos.toError("failure", msg))
 
   def slice(p: Parser[Any]): Parser[String] = state => {
     p(state) match {
       case Success(_, s) => Success(s, s)
-      case f@Failure(_) => f
-    }
-  }
-
-  def flatMap[A, B](p: Parser[A])(f: (A) => Parser[B]): Parser[B] = state => {
-    p(state) match {
-      case Success(a, s) =>
-        val newState = state.moveForward(s.length)
-        f(a)(newState)
       case f@Failure(_) => f
     }
   }
@@ -145,4 +152,5 @@ object SimpleParsers extends Parsers[Parser] {
         Success(res, res)
     }
   }
+
 }
