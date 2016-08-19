@@ -464,8 +464,8 @@ trait Parsers[Parser[+_]] { self =>
     def toRootParser: Parser[A] = self.rootParser(p)
     def sepBy(separator: Parser[Any]): Parser[List[A]] = self.sep(p)(separator)
     def sepBy1(separator: Parser[Any]): Parser[List[A]] = self.sep1(p)(separator)
-    def ?>>[B](p2: Parser[B]): Parser[B] = self.skipLeft(p, p2)
-    def <<?(p2: Parser[Any]): Parser[A] = self.skipRight(p, p2)
+    def ?>>[B](p2: Parser[B]): Parser[B] = self.maySkipLeft(p, p2)
+    def <<?(p2: Parser[Any]): Parser[A] = self.maySkipRight(p, p2)
   }
 }
 
@@ -494,7 +494,7 @@ case class Position(input: String, offset: Int = 0) {
   def toError(name: String, msg: String): ParseError =
     ParseError(List((this, name, msg)))
 
-  def moveForward(n: Int) = copy(offset = offset+n)
+  def moveForward(n: Int) = copy(offset = offset + n)
 
   def currentLine: String =
     if (input.length > 1)
