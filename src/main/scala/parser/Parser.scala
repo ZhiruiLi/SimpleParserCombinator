@@ -249,26 +249,6 @@ trait Parsers[Parser[+_]] { self =>
     } yield l
 
   /**
-    * Just as the skipLeft function, except that it won't fail even if the left parser fails.
-    * @param pl the left parser
-    * @param pr the right parser
-    * @tparam R the result type
-    * @return a parser
-    */
-  def maySkipLeft[R](pl: Parser[Any], pr: Parser[R]): Parser[R] =
-    (pl >> pr).attempt | pr
-
-  /**
-    * Just as the skipRight function, except that it won't fail even if the right parser fails.
-    * @param pl the left parser
-    * @param pr the right parser
-    * @tparam L the result type
-    * @return a parser
-    */
-  def maySkipRight[L](pl: Parser[L], pr: Parser[Any]): Parser[L] =
-    (pl << pr).attempt | pl
-
-  /**
     * Parses the input string using left surrounder parser, content parser and right surrounder parser in order.
     * The results of the surrounder parsers will be throw away.
     * The whole parser will only succeed if the three parsers all succeed.
