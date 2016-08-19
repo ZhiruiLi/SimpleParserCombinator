@@ -90,21 +90,23 @@ trait Parsers[Parser[+_]] { self =>
 
   /**
     * Labels a error message to a parser, this will ignore the original messages.
+    * @param name the name of parser
     * @param msg the error message
     * @param p the parser
     * @tparam A the result type of the parser
     * @return a parser that will produce the same success result of the original one
     */
-  def label[A](msg: String)(p: Parser[A]): Parser[A]
+  def label[A](name: String, msg: String)(p: Parser[A]): Parser[A]
 
   /**
     * Pushes an error message to a parser. This will keep the original messages.
+    * @param name the name of parser
     * @param msg the error message
     * @param p the parser
     * @tparam A the result type of the parser
     * @return a parser that will produce the same success result of the original one
     */
-  def scope[A](msg: String)(p: Parser[A]): Parser[A]
+  def scope[A](name: String, msg: String)(p: Parser[A]): Parser[A]
 
   /**
     * Parses the input string until a specific string occurs (excluding that string).
@@ -305,7 +307,7 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser
     */
   def eof: Parser[Unit] =
-    regex("\\z".r).as(()).labelError("unexpected trailing characters")
+    regex("\\z".r).as(()).labelError("eof", "unexpected trailing characters")
 
   /**
     * Convert a parser to a root parser, it will succeed only when the given parser succeed
@@ -345,49 +347,49 @@ trait Parsers[Parser[+_]] { self =>
     * parser for a letter char
     * @return parser of char
     */
-  def letter: Parser[Char] = "[a-zA-Z]".r.map(_.charAt(0)).labelError("not a letter")
+  def letter: Parser[Char] = "[a-zA-Z]".r.map(_.charAt(0)).labelError("letter", "not a letter")
 
   /**
     * parser for a capital letter char
     * @return parser of char
     */
-  def capitalLetter: Parser[Char] = "[A-Z]".r.map(_.charAt(0)).labelError("not a capital letter")
+  def capitalLetter: Parser[Char] = "[A-Z]".r.map(_.charAt(0)).labelError("capitalLetter", "not a capital letter")
 
   /**
     * parser for a small letter char
     * @return parser of char
     */
-  def smallLetter: Parser[Char] = "[a-z]".r.map(_.charAt(0)).labelError("not a ")
+  def smallLetter: Parser[Char] = "[a-z]".r.map(_.charAt(0)).labelError("smallLetter", "not a small letter")
 
   /**
     * parser for a digit char
     * @return parser of char
     */
-  def digit: Parser[Char] = "\\d".r.map(_.charAt(0))
+  def digit: Parser[Char] = "\\d".r.map(_.charAt(0)).labelError("digit", "not a digit")
 
   /**
     * parser for a white space char
     * @return parser of char
     */
-  def whiteSpace: Parser[Char] = "\\s".r.map(_.charAt(0))
+  def whiteSpace: Parser[Char] = "\\s".r.map(_.charAt(0)).labelError("whiteSpace", "not a white space")
 
   /**
     * parser for a string of letters
     * @return parser of string
     */
-  def letters: Parser[String] = "[a-zA-Z]+".r
+  def letters: Parser[String] = "[a-zA-Z]+".r.labelError("letters", "found no letters")
 
   /**
     * parser for a string of digits
     * @return parser of string
     */
-  def digits: Parser[String] = "\\d+".r
+  def digits: Parser[String] = "\\d+".r.labelError("digits", "found no digits")
 
   /**
     * parser for a string of white spaces
     * @return parser of string
     */
-  def whiteSpaces: Parser[String] = "\\s+".r
+  def whiteSpaces: Parser[String] = "\\s+".r.labelError("whiteSpaces", "found no white spaces")
 
   /**
     * Try to parse the string using the left parser, if succeed, parse the remain string using the right parser.
@@ -416,25 +418,31 @@ trait Parsers[Parser[+_]] { self =>
     * a parser of decimal fraction string
     * @return a parser of string
     */
-  def doubleString: Parser[String] = "[+-]?([0-9]*\\.?[0-9]+|[0-9]+\\.?[0-9]*)([eE][+-]?[0-9]+)?".r
+  def doubleString: Parser[String] =
+    "[+-]?([0-9]*\\.?[0-9]+|[0-9]+\\.?[0-9]*)([eE][+-]?[0-9]+)?".r.
+      labelError("doubleString", "not a decimal fraction string")
 
   /**
     * a parser of decimal fraction
     * @return a parser of double
     */
-  def double: Parser[Double] = doubleString.map(_.toDouble)
+  def double: Parser[Double] = doubleString.map(_.toDouble).labelError("double", "not a decimal fraction")
 
   /**
     * a parser of non-negative integer number string
     * @return a parser of string
     */
-  def nonNegativeIntString: Parser[String] = "\\d+".r
+  def nonNegativeIntString: Parser[String] = "\\d+".r.
+    labelError("nonNegativeIntString", "not a non-negative integer number string")
 
-  def nonNegativeInt: Parser[Int] = nonNegativeIntString.map(_.toInt)
+  def nonNegativeInt: Parser[Int] = nonNegativeIntString.map(_.toInt).
+    labelError("nonNegativeIntString", "not a non-negative integer number")
 
-  def intString: Parser[String] = "-?\\d+".r
+  def intString: Parser[String] = "-?\\d+".r.
+    labelError("nonNegativeIntString", "not a integer number string")
 
-  def int: Parser[Int] = intString.map(_.toInt)
+  def int: Parser[Int] = intString.map(_.toInt).
+    labelError("nonNegativeIntString", "not a integer number")
 
   /**
     * Parses the input string to where a specific string occurs (including that string).
@@ -442,10 +450,10 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser
     */
   def parseTo(s: String): Parser[String] =
-    for {
+    (for {
       s1 <- parseUntil(s)
       s2 <- string(s)
-    } yield s1 + s2
+    } yield s1 + s2).labelError("parseTo", s"can't find string '$s'")
 
   /**
     * a wrapper provide some operators to parsers
@@ -471,8 +479,8 @@ trait Parsers[Parser[+_]] { self =>
     def surroundedBy(ps: Parser[Any]): Parser[A] = self.surround(p)(ps, ps)
     def filter(pre: A => Boolean): Parser[A] = self.filter(p)(pre)
     def as[B](b: => B): Parser[B] = self.convert(p)(b)
-    def labelError(msg: String): Parser[A] = self.label(msg)(p)
-    def scopeError(msg: String): Parser[A] = self.scope(msg)(p)
+    def labelError(name: String, msg: String): Parser[A] = self.label(name, msg)(p)
+    def scopeError(name: String, msg: String): Parser[A] = self.scope(name, msg)(p)
     def toRootParser: Parser[A] = self.rootParser(p)
     def sepBy(separator: Parser[Any]): Parser[List[A]] = self.sep(p)(separator)
     def sepBy1(separator: Parser[Any]): Parser[List[A]] = self.sep1(p)(separator)
@@ -482,6 +490,7 @@ trait Parsers[Parser[+_]] { self =>
 }
 
 object ParserTypes {
+
   type ParserName = String
   type ErrorMessage = String
   type ErrorInfo = (Position, ParserName, ErrorMessage)
@@ -502,7 +511,7 @@ case class Position(input: String, offset: Int = 0) {
     case lineStart => offset - lineStart
   }
 
-  def toError(name: ParserName, msg: ErrorMessage): ParseError =
+  def toError(name: String, msg: String): ParseError =
     ParseError(List((this, name, msg)))
 
   def moveForward(n: Int) = copy(offset = offset+n)
@@ -518,7 +527,7 @@ case class ParseError(infoStack: List[ErrorInfo]) {
   def push(pos: Position, name: ParserName, msg: ErrorMessage): ParseError =
     copy(infoStack = (pos, name, msg) :: infoStack)
 
-  def label[A](name: ParserName, msg: ErrorMessage): ParseError =
+  def label[A](name: String, msg: String): ParseError =
     ParseError(latestPos.map((_, name, msg)).toList)
 
   def latest: Option[ErrorInfo] =
