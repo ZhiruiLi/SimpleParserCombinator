@@ -33,9 +33,12 @@ object SimpleParsers extends Parsers[Parser] {
 
   def flatMap[A, B](p: Parser[A])(f: (A) => Parser[B]): Parser[B] = state => {
     p(state) match {
-      case Success(a, s) =>
-        val newState = state.moveForward(s.length)
-        f(a)(newState)
+      case Success(a, s1) =>
+        val newState = state.moveForward(s1.length)
+        f(a)(newState) match {
+          case Success(b, s2) => Success(b, s1 + s2)
+          case f@Failure(_) => f
+        }
       case f@Failure(_) => f
     }
   }

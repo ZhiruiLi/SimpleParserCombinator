@@ -1,7 +1,5 @@
 package parser
 
-import parser.ParserTypes.{ErrorInfo, ErrorMessage, ParserName, infoOperator}
-
 import scala.util.matching.Regex
 
 trait Parsers[Parser[+_]] { self =>
@@ -229,7 +227,7 @@ trait Parsers[Parser[+_]] { self =>
     */
   def skipLeft[R](pl: Parser[Any], pr: Parser[R]): Parser[R] =
     for {
-      _ <- slice(pl)
+      _ <- pl
       r <- pr
     } yield r
 
@@ -245,7 +243,7 @@ trait Parsers[Parser[+_]] { self =>
   def skipRight[L](pl: Parser[L], pr: Parser[Any]): Parser[L] =
     for {
       l <- pl
-      _ <- slice(pr)
+      _ <- pr
     } yield l
 
   /**
@@ -442,6 +440,10 @@ trait Parsers[Parser[+_]] { self =>
     */
   case class ParserOps[A](p: Parser[A]) {
     def parse(input: String): Either[ParseError, A] = run(p)(input)
+    def test(input: String): Unit = run(p)(input) match {
+      case Left(x) => println(x)
+      case Right(x) => println(x)
+    }
     def |[B>:A](p2: => Parser[B]): Parser[B] = self.or(p, p2)
     def or[B>:A](p2: => Parser[B]): Parser[B] = self.or(p, p2)
     def * : Parser[List[A]] = self.many(p)
@@ -469,20 +471,7 @@ trait Parsers[Parser[+_]] { self =>
   }
 }
 
-object ParserTypes {
-
-  type ParserName = String
-  type ErrorMessage = String
-  type ErrorInfo = (Position, ParserName, ErrorMessage)
-
-  implicit def infoOperator(info: ErrorInfo) = ErrorInfoOps(info)
-
-  case class ErrorInfoOps(info: ErrorInfo) {
-    def position = info._1
-    def name = info._2
-    def message = info._3
-  }
-}
+case class ErrorInfo(pos: Position, name: String, message: String)
 
 case class Position(input: String, offset: Int = 0) {
   lazy val line = input.slice(0,offset+1).count(_ == '\n') + 1
@@ -492,7 +481,7 @@ case class Position(input: String, offset: Int = 0) {
   }
 
   def toError(name: String, msg: String): ParseError =
-    ParseError(List((this, name, msg)))
+    ParseError(List(ErrorInfo(this, name, msg)))
 
   def moveForward(n: Int) = copy(offset = offset + n)
 
@@ -504,31 +493,26 @@ case class Position(input: String, offset: Int = 0) {
 
 case class ParseError(infoStack: List[ErrorInfo]) {
 
-  def push(pos: Position, name: ParserName, msg: ErrorMessage): ParseError =
-    copy(infoStack = (pos, name, msg) :: infoStack)
+  def push(pos: Position, name: String, msg: String): ParseError =
+    copy(infoStack = ErrorInfo(pos, name, msg) :: infoStack)
 
   def label[A](name: String, msg: String): ParseError =
-    ParseError(latestPos.map((_, name, msg)).toList)
+    ParseError(latestPos.map(ErrorInfo(_, name, msg)).toList)
 
   def latest: Option[ErrorInfo] =
-    infoStack.lastOption
+    infoStack.headOption
 
   def latestPos: Option[Position] =
-    latest map (_._1)
+    latest map (_.pos)
 
   override def toString =
     if (infoStack.isEmpty) "no error message"
     else {
-      val collapsed = collapseStack(infoStack)
-      collapsed.map { case (pos, name, msg) => name + ": [" + formatPos(pos) + "] " + msg }.mkString("\n")
+      infoStack.map(formatError).mkString("\n")
     }
 
-  def collapseStack(s: List[ErrorInfo]): List[ErrorInfo] =
-    s.groupBy(_._1).
-      mapValues { lst => (lst.map(_.name).mkString(" & "), lst.map(_.message).mkString("; ")) }.
-      toList.
-      map { case (pos, (name, msg)) => (pos, name, msg) }.
-      sortBy(_._1.offset)
+  def formatPos(p: Position): String = p.line + "," + p.column
 
-  def formatPos(l: Position): String = l.line + "," + l.column
+  def formatError(e: ErrorInfo): String =
+    "[" + formatPos(e.pos) + "]" + e.name + ": " + e.message
 }

@@ -1,27 +1,29 @@
 package examples
 
-import parser.{ParseError, Parsers, SimpleParserTypes, SimpleParsers}
+import parser.{ParseError, Parsers, SimpleParsers}
 
 object JsonTest extends App {
 
-  import SimpleParsers._
-//  println(JSON.parse("null "))
-//  println(JSON.parse("null"))
-//  println(JSON.parse("null abc"))
-//
-//  println("\\z".r.parse(""))
-//  println(eof.parse(""))
-//  println((succeed("") << whiteSpaces) parse "  ")
-//  println((succeed("") << whiteSpaces) parse "")
-//  println((succeed("") <<? whiteSpaces).toRootParser parse "  ")
+  val s = """
 
-  val p = for {
-    a <- "ab" <<? whiteSpaces
-    b <- "cd" << whiteSpace
-  } yield (a, b)
+            { "a" : 123,
+       "bc":45.6        ,
 
-  println(p.parse("ab    cd  "))
 
+
+
+       "1ab": true,
+       "e*3" : [ "aaa" , 3.2,null , {
+
+       "abc" : false
+
+       }
+]
+
+       }
+    """
+
+  println(JSON parse s)
 }
 
 sealed trait JSON
@@ -44,31 +46,33 @@ object JSON {
 
     import parsers._
 
-    def jNumber: Parser[JSON] = (double map JNumber) <<? whiteSpaces
+    def token[A](p: Parser[A]): Parser[A] = p <<? whiteSpaces
 
-    def jNull: Parser[JSON] = ("null" as JNull) <<? whiteSpaces
+    def jNumber: Parser[JSON] = token(double map JNumber)
 
-    def jBoolean: Parser[JSON] = (("true" as JBoolean(true)) | ("false" as JBoolean(false))) <<? whiteSpaces
+    def jNull: Parser[JSON] = token("null" as JNull)
 
-    def stringLiteral: Parser[String] = parseUntil("\"").surroundedBy("\"")
+    def jBoolean: Parser[JSON] = token(("true" as JBoolean(true)) | ("false" as JBoolean(false)))
 
-    def jString: Parser[JSON] = stringLiteral.map(JString) <<? whiteSpaces
+    def stringLiteral: Parser[String] = token(parseUntil("\"").surroundedBy("\""))
+
+    def jString: Parser[JSON] = stringLiteral map JString
 
     def jObjectElement: Parser[(String, JSON)] = for {
       key <- stringLiteral
-      _ <- whiteSpaces ?>> ":" <<? whiteSpaces
+      _ <- token(":")
       value <- jValue
     } yield (key, value)
 
-    def comma: Parser[String] = "," <<? whiteSpaces
+    def comma: Parser[String] = token(",")
 
-    def openBrace: Parser[String] = "{" <<? whiteSpaces
+    def openBrace: Parser[String] = token("{")
 
-    def closeBrace: Parser[String] = "}" <<? whiteSpaces
+    def closeBrace: Parser[String] = token("}")
 
-    def openBracket: Parser[String] = "[" <<? whiteSpaces
+    def openBracket: Parser[String] = token("[")
 
-    def closeBracket: Parser[String] = "]" <<? whiteSpaces
+    def closeBracket: Parser[String] = token("]")
 
     def jObject: Parser[JSON] = jObjectElement.
       sepBy(comma).
@@ -85,6 +89,6 @@ object JSON {
     def jValue: Parser[JSON] =
       jNumber.attempt | jNull.attempt | jBoolean.attempt | jString.attempt | jArray.attempt | jObject
 
-    jValue
+    (whiteSpaces ?>> jValue).toRootParser
   }
 }
