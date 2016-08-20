@@ -404,7 +404,8 @@ trait Parsers[Parser[+_]] { self =>
     * a parser of decimal fraction
     * @return a parser of double
     */
-  def double: Parser[Double] = doubleString.map(_.toDouble).labelError("double", "not a decimal fraction")
+  def double: Parser[Double] = doubleString.map(_.toDouble).
+    labelError("double", "not a decimal fraction")
 
   /**
     * a parser of non-negative integer number string
@@ -413,12 +414,24 @@ trait Parsers[Parser[+_]] { self =>
   def nonNegativeIntString: Parser[String] = "\\d+".r.
     labelError("nonNegativeIntString", "not a non-negative integer number string")
 
+  /**
+    * a parser of non-negative integer number
+    * @return a parser of int
+    */
   def nonNegativeInt: Parser[Int] = nonNegativeIntString.map(_.toInt).
     labelError("nonNegativeIntString", "not a non-negative integer number")
 
+  /**
+    * a parser of integer number string
+    * @return a parser of string
+    */
   def intString: Parser[String] = "-?\\d+".r.
     labelError("nonNegativeIntString", "not a integer number string")
 
+  /**
+    * a parser of integer number
+    * @return a parser of int
+    */
   def int: Parser[Int] = intString.map(_.toInt).
     labelError("nonNegativeIntString", "not a integer number")
 
@@ -440,10 +453,6 @@ trait Parsers[Parser[+_]] { self =>
     */
   case class ParserOps[A](p: Parser[A]) {
     def parse(input: String): Either[ParseError, A] = run(p)(input)
-    def test(input: String): Unit = run(p)(input) match {
-      case Left(x) => println(x)
-      case Right(x) => println(x)
-    }
     def |[B>:A](p2: => Parser[B]): Parser[B] = self.or(p, p2)
     def or[B>:A](p2: => Parser[B]): Parser[B] = self.or(p, p2)
     def * : Parser[List[A]] = self.many(p)
@@ -474,7 +483,9 @@ trait Parsers[Parser[+_]] { self =>
 case class ErrorInfo(pos: Position, name: String, message: String)
 
 case class Position(input: String, offset: Int = 0) {
+
   lazy val line = input.slice(0,offset+1).count(_ == '\n') + 1
+
   lazy val column = input.slice(0,offset+1).lastIndexOf('\n') match {
     case -1 => offset + 1
     case lineStart => offset - lineStart
