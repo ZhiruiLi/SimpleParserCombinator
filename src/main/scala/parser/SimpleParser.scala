@@ -43,12 +43,21 @@ object SimpleParsers extends Parsers[Parser] {
     }
   }
 
+  def beautifyString(str: String): String = str.map {
+    case '\n' => "\\n"
+    case '\t' => "\\t"
+    case '\f' => "\\f"
+    case '\'' => "\\'"
+    case c => c.toString
+  }.mkString
+
   implicit def string(s: String): Parser[String] = state => {
     val current = state.currentInput
     if (current.startsWith(s)) Success(s, s)
     else {
+      val originalS = beautifyString(current.substring(0, Math.min(s.length, current.length)))
       Failure(state.toError("string",
-        s"require '$s', but found '${current.substring(0, Math.min(s.length, current.length))}'"
+        s"require '$s', but found '$originalS'"
       ))
     }
   }
@@ -58,9 +67,10 @@ object SimpleParsers extends Parsers[Parser] {
     r.findPrefixOf(current) match {
       case Some(s) => Success(s, s)
       case None => {
-        val showMsg = if (current.length > 5) current.substring(0, 5) + " ..." else current
+        val originalS =
+          beautifyString(if (current.length > 5) current.substring(0, 5) + " ..." else current)
         Failure(state.toError("regex",
-          s"require regex '${r.toString}', but found '$showMsg'"
+          s"require regex '${r.toString}', but found '$originalS'"
         ))
       }
     }
@@ -128,7 +138,12 @@ object SimpleParsers extends Parsers[Parser] {
   def attempt[A](p: Parser[A]): Parser[A] = state => {
     p(state) match {
       case s@Success(_, _) => s
-      case Failure(error) => Failure(error.push(state.pos, "attempt", "try parse input fail"))
+      case Failure(error) =>
+        val newError = error.infoStack match {
+          case Nil => ParseError(Nil)
+          case h::t => ParseError(t).push(state.pos, h.name, h.message)
+        }
+        Failure(newError)
     }
   }
 
