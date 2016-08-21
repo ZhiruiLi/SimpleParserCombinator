@@ -36,14 +36,12 @@ case object JNull extends JSON
 
 object JSON {
 
-  import SimpleParsers._
-
   def parse(input: String): Either[ParseError, JSON] = {
-    getParser(SimpleParsers) parse input
+    import SimpleParsers._
+    getRootParser(SimpleParsers) parse input
   }
 
   def getParser[Parser[+_]](parsers: Parsers[Parser]): Parser[JSON] = {
-
     import parsers._
 
     def token[A](p: Parser[A]): Parser[A] = p <<? whiteSpaces
@@ -89,6 +87,11 @@ object JSON {
     def jValue: Parser[JSON] =
       jNumber.attempt | jNull.attempt | jBoolean.attempt | jString.attempt | jArray.attempt | jObject
 
-    (whiteSpaces ?>> jValue).toRootParser
+    jValue
+  }
+
+  def getRootParser[Parser[+_]](parsers: Parsers[Parser]): Parser[JSON] = {
+    import parsers._
+    (whiteSpaces ?>> getParser(parsers)).toRootParser
   }
 }
