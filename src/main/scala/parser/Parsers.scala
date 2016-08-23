@@ -297,6 +297,15 @@ trait Parsers[Parser[+_]] { self =>
   def rootParser[A](p: Parser[A]): Parser[A] = p << eof
 
   /**
+    * Convert a parser to a token parser. A token parser will consume the white spaces after
+    * the original parsing succeed.
+    * @param p the parser
+    * @tparam A the result type
+    * @return a token parser
+    */
+  def tokenParser[A](p: Parser[A]): Parser[A] = p <<? whiteSpaces
+
+  /**
     * Parse the string at least one times using a given parser p, each two parsing between that should use the
     * separator parser to parse the string. The result of the separator will be throw away.
     * @param p the parser of content
@@ -472,7 +481,8 @@ trait Parsers[Parser[+_]] { self =>
     def as[B](b: => B): Parser[B] = self.convert(p)(b)
     def labelError(name: String, msg: String): Parser[A] = self.label(name, msg)(p)
     def scopeError(name: String, msg: String): Parser[A] = self.scope(name, msg)(p)
-    def toRootParser: Parser[A] = self.rootParser(p)
+    def asRoot: Parser[A] = self.rootParser(p)
+    def asToken: Parser[A] = self.tokenParser(p)
     def sepBy(separator: Parser[Any]): Parser[List[A]] = self.sep(p)(separator)
     def sepBy1(separator: Parser[Any]): Parser[List[A]] = self.sep1(p)(separator)
     def ?>>[B](p2: Parser[B]): Parser[B] = self.maySkipLeft(p, p2)

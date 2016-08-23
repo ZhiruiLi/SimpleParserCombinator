@@ -9,9 +9,6 @@ object JsonTest extends App {
             { "a" : 123,
        "bc":45.6        ,
 
-
-
-
        "1ab": true,
        "e*3" : [ "aaa" , 3.2,null , {
 
@@ -44,33 +41,31 @@ object JSON {
   def getParser[Parser[+_]](parsers: Parsers[Parser]): Parser[JSON] = {
     import parsers._
 
-    def token[A](p: Parser[A]): Parser[A] = p <<? whiteSpaces
+    def jNumber: Parser[JSON] = double map JNumber asToken
 
-    def jNumber: Parser[JSON] = token(double map JNumber)
+    def jNull: Parser[JSON] = "null" as JNull asToken
 
-    def jNull: Parser[JSON] = token("null" as JNull)
+    def jBoolean: Parser[JSON] = (("true" as JBoolean(true)) | ("false" as JBoolean(false))) asToken
 
-    def jBoolean: Parser[JSON] = token(("true" as JBoolean(true)) | ("false" as JBoolean(false)))
-
-    def stringLiteral: Parser[String] = token(parseUntil("\"").surroundedBy("\""))
+    def stringLiteral: Parser[String] = parseUntil("\"").surroundedBy("\"") asToken
 
     def jString: Parser[JSON] = stringLiteral map JString
 
     def jObjectElement: Parser[(String, JSON)] = for {
       key <- stringLiteral
-      _ <- token(":")
+      _ <- ":".asToken
       value <- jValue
     } yield (key, value)
 
-    def comma: Parser[String] = token(",")
+    def comma: Parser[String] = ",".asToken
 
-    def openBrace: Parser[String] = token("{")
+    def openBrace: Parser[String] = "{".asToken
 
-    def closeBrace: Parser[String] = token("}")
+    def closeBrace: Parser[String] = "}".asToken
 
-    def openBracket: Parser[String] = token("[")
+    def openBracket: Parser[String] = "[".asToken
 
-    def closeBracket: Parser[String] = token("]")
+    def closeBracket: Parser[String] = "]".asToken
 
     def jObject: Parser[JSON] = jObjectElement.
       sepBy(comma).
@@ -92,6 +87,6 @@ object JSON {
 
   def getRootParser[Parser[+_]](parsers: Parsers[Parser]): Parser[JSON] = {
     import parsers._
-    (whiteSpaces ?>> getParser(parsers)).toRootParser
+    (whiteSpaces ?>> getParser(parsers)) asRoot
   }
 }
