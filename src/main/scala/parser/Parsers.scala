@@ -138,7 +138,7 @@ trait Parsers[Parser[+_]] { self =>
     */
   implicit def asStringParser[A]
   (a: A)(implicit converter: A => Parser[String]): ParserOps[String] =
-    ParserOps(converter(a))
+  ParserOps(converter(a))
 
   /**
     * A parser of a specific char.
@@ -159,11 +159,10 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam A the return type of the parser
     * @return a parser of List[A]
     */
-  def many1[A](p: Parser[A]): Parser[List[A]] =
-    for {
-      a <- p
-      as <- many(p)
-    } yield a::as
+  def many1[A](p: Parser[A]): Parser[List[A]] = for {
+    a <- p
+    as <- many(p)
+  } yield a::as
 
   /**
     * Parses the input string and converts the result using the given function if the parsing succeed.
@@ -174,7 +173,7 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser
     */
   def map[A, B](p: Parser[A])(f: A => B): Parser[B] =
-    p flatMap (a => succeed(f(a)))
+  p flatMap (a => succeed(f(a)))
 
   /**
     * Parses the input string using two parses. If both of them succeed, apply the function to the two results,
@@ -187,11 +186,10 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam C the result type of the new parser
     * @return the new parser
     */
-  def map2[A, B, C](pa: Parser[A], pb: Parser[B])(f: (A, B) => C): Parser[C] =
-    for {
-      a <- pa
-      b <- pb
-    } yield f(a, b)
+  def map2[A, B, C](pa: Parser[A], pb: Parser[B])(f: (A, B) => C): Parser[C] = for {
+    a <- pa
+    b <- pb
+  } yield f(a, b)
 
   /**
     * aliase of succeed
@@ -210,11 +208,10 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam B the result type of the second parser
     * @return a parser of tuple
     */
-  def product[A, B](pa: Parser[A], pb: => Parser[B]): Parser[(A, B)] =
-    for {
-      a <- pa
-      b <- pb
-    } yield (a, b)
+  def product[A, B](pa: Parser[A], pb: => Parser[B]): Parser[(A, B)] = for {
+    a <- pa
+    b <- pb
+  } yield (a, b)
 
   /**
     * Parses the input string using the left parser, throws the result away,
@@ -225,11 +222,10 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam R the result type
     * @return a parser
     */
-  def skipLeft[R](pl: Parser[Any], pr: Parser[R]): Parser[R] =
-    for {
-      _ <- pl
-      r <- pr
-    } yield r
+  def skipLeft[R](pl: Parser[Any], pr: Parser[R]): Parser[R] = for {
+    _ <- pl
+    r <- pr
+  } yield r
 
   /**
     * Parses the input string using the left parser,
@@ -240,11 +236,10 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam L the result type
     * @return a parser
     */
-  def skipRight[L](pl: Parser[L], pr: Parser[Any]): Parser[L] =
-    for {
-      l <- pl
-      _ <- pr
-    } yield l
+  def skipRight[L](pl: Parser[L], pr: Parser[Any]): Parser[L] = for {
+    l <- pl
+    _ <- pr
+  } yield l
 
   /**
     * Parses the input string using left surrounder parser, content parser and right surrounder parser in order.
@@ -257,7 +252,7 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser
     */
   def surround[A](p: Parser[A])(pl: Parser[Any], pr: Parser[Any]): Parser[A] =
-    pl >> p << pr
+  pl >> p << pr
 
   /**
     * If the parsing succeed, filter the result with a predicate function.
@@ -267,7 +262,7 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser
     */
   def filter[A](p: Parser[A])(pre: A => Boolean): Parser[A] =
-    p.flatMap(x => if (pre(x)) succeed(x) else failure("fail of filter"))
+  p.flatMap(x => if (pre(x)) succeed(x) else failure("fail of filter"))
 
   /**
     * Parses the input string with the given parser,
@@ -285,7 +280,7 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser
     */
   def eof: Parser[Unit] =
-    regex("\\z".r).as(()).labelError("eof", "unexpected trailing characters")
+  regex("\\z".r).as(()).labelError("eof", "unexpected trailing characters")
 
   /**
     * Convert a parser to a root parser, it will succeed only when the given parser succeed
@@ -313,11 +308,10 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam A the result type of the content parser
     * @return a parser of list
     */
-  def sep1[A](p: Parser[A])(separator: Parser[Any]): Parser[List[A]] =
-    for {
-      a <- p
-      as <- (separator >> p) *
-    } yield a::as
+  def sep1[A](p: Parser[A])(separator: Parser[Any]): Parser[List[A]] = for {
+    a <- p
+    as <- (separator >> p) *
+  } yield a::as
 
   /**
     * Parse the string at least zero or more times using a given parser p, each two parsing between that should use the
@@ -328,7 +322,7 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser of list
     */
   def sep[A](p: Parser[A])(separator: Parser[Any]): Parser[List[A]] =
-    sep1(p)(separator) | succeed(Nil)
+  sep1(p)(separator) | succeed(Nil)
 
   /**
     * parser for a letter char
@@ -386,8 +380,10 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam R the result type
     * @return a parser
     */
-  def maySkipLeft[R](pl: Parser[Any], pr: Parser[R]): Parser[R] =
-    (pl >> pr).attempt | pr
+  def maySkipLeft[R](pl: Parser[Any], pr: Parser[R]): Parser[R] = for {
+    _ <- pl | succeed(())
+    r <- pr
+  } yield r
 
   /**
     * Parses the string using the left parser, if succeed, try to parse the remain string using the right parser.
@@ -398,16 +394,18 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam L the result type
     * @return a parser
     */
-  def maySkipRight[L](pl: Parser[L], pr: Parser[Any]): Parser[L] =
-    (pl << pr).attempt | pl
+  def maySkipRight[L](pl: Parser[L], pr: Parser[Any]): Parser[L] = for {
+    l <- pl
+    _ <- pr | succeed(())
+  } yield l
 
   /**
     * a parser of decimal fraction string
     * @return a parser of string
     */
   def doubleString: Parser[String] =
-    "[+-]?([0-9]*\\.?[0-9]+|[0-9]+\\.?[0-9]*)([eE][+-]?[0-9]+)?".r.
-      labelError("doubleString", "not a decimal fraction string")
+  "[+-]?([0-9]*\\.?[0-9]+|[0-9]+\\.?[0-9]*)([eE][+-]?[0-9]+)?".r.
+    labelError("doubleString", "not a decimal fraction string")
 
   /**
     * a parser of decimal fraction
@@ -449,11 +447,10 @@ trait Parsers[Parser[+_]] { self =>
     * @param s the specific string
     * @return a parser
     */
-  def parseTo(s: String): Parser[String] =
-    (for {
-      s1 <- parseUntil(s)
-      s2 <- string(s)
-    } yield s1 + s2).labelError("parseTo", s"can't find string '$s'")
+  def parseTo(s: String): Parser[String] = (for {
+    s1 <- parseUntil(s)
+    s2 <- string(s)
+  } yield s1 + s2).labelError("parseTo", s"can't find string '$s'")
 
   /**
     * a wrapper provide some operators to parsers

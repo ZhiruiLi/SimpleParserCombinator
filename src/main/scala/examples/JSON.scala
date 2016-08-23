@@ -41,15 +41,17 @@ object JSON {
   def getParser[Parser[+_]](parsers: Parsers[Parser]): Parser[JSON] = {
     import parsers._
 
-    def jNumber: Parser[JSON] = double map JNumber asToken
+    def jNumber: Parser[JSON] = (double map JNumber asToken) scopeError ("jNumber", "not a JSON number")
 
-    def jNull: Parser[JSON] = "null" as JNull asToken
+    def jNull: Parser[JSON] = ("null" as JNull asToken) scopeError ("jNull", "not a JSON null")
 
-    def jBoolean: Parser[JSON] = (("true" as JBoolean(true)) | ("false" as JBoolean(false))) asToken
+    def jBoolean: Parser[JSON] =
+      ((("true" as JBoolean(true)) | ("false" as JBoolean(false))) asToken).
+        scopeError ("jBoolean", "not a JSON boolean")
 
     def stringLiteral: Parser[String] = parseUntil("\"").surroundedBy("\"") asToken
 
-    def jString: Parser[JSON] = stringLiteral map JString
+    def jString: Parser[JSON] = stringLiteral map JString scopeError ("jString", "not a JSON string")
 
     def jObjectElement: Parser[(String, JSON)] = for {
       key <- stringLiteral
@@ -71,16 +73,21 @@ object JSON {
       sepBy(comma).
       surroundedBy(openBrace, closeBrace).
       map(_.toMap).
-      map(JObject)
+      map(JObject).scopeError("jObject", "not a JSON object")
 
     def jArray: Parser[JSON] = jValue.
       sepBy(comma).
       surroundedBy(openBracket, closeBracket).
       map(_.toIndexedSeq).
-      map(JArray)
+      map(JArray).scopeError("jArray", "not a JSON array")
 
     def jValue: Parser[JSON] =
-      jNumber.attempt | jNull.attempt | jBoolean.attempt | jString.attempt | jArray.attempt | jObject
+      (jNull.attempt |
+        jNumber.attempt |
+        jBoolean.attempt |
+        jString.attempt |
+        jArray.attempt |
+        jObject) scopeError ("jValue", "not a JSON value")
 
     jValue
   }
