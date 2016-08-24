@@ -1,6 +1,7 @@
 package parser
 
 import SimpleParserTypes._
+import language.implicitConversions
 
 import scala.util.matching.Regex
 
@@ -66,13 +67,12 @@ object SimpleParsers extends Parsers[Parser] {
     val current = state.currentInput
     r.findPrefixOf(current) match {
       case Some(s) => Success(s, s)
-      case None => {
+      case None =>
         val originalS =
           beautifyString(if (current.length > 5) current.substring(0, 5) + " ..." else current)
         Failure(state.toError("regex",
           s"require regex '${r.toString}', but found '$originalS'"
         ))
-      }
     }
   }
 
@@ -112,18 +112,17 @@ object SimpleParsers extends Parsers[Parser] {
   def or[A](p1: Parser[A], p2: => Parser[A]): Parser[A] = state => {
     p1(state) match {
       case s1@Success(_, _) => s1
-      case Failure(error1) => {
+      case Failure(error1) =>
         val latestPos = error1.latestPos.getOrElse(state.pos)
         p2(State(latestPos)) match {
           case s2@Success(_, _) => s2
           case Failure(error2) =>
             Failure(ParseError(error2.infoStack ++ error1.infoStack))
         }
-      }
     }
   }
 
-  def succeed[A](a: A): Parser[A] = state => Success(a, "")
+  def success[A](a: A): Parser[A] = state => Success(a, "")
 
   def failure(msg: String = "always fail"): Parser[Nothing] =
     state => Failure(state.pos.toError("failure", msg))

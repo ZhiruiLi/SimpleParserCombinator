@@ -1,6 +1,9 @@
 package parser
 
 import scala.util.matching.Regex
+import language.higherKinds
+import language.implicitConversions
+import language.postfixOps
 
 trait Parsers[Parser[+_]] { self =>
 
@@ -33,7 +36,7 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam A the return type of the parser
     * @return a parser of List[A]
     */
-  def many[A](p: Parser[A]): Parser[List[A]] = or(many1(p), succeed(Nil))
+  def many[A](p: Parser[A]): Parser[List[A]] = or(many1(p), success(Nil))
 
   /**
     * Reads a n-length string from the input without consuming the input string.
@@ -58,7 +61,7 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam A the result type
     * @return a parser will always succeed
     */
-  def succeed[A](a: A): Parser[A]
+  def success[A](a: A): Parser[A]
 
   /**
     * a parser that always fail
@@ -127,7 +130,7 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam A the result type of the parser
     * @return a wrapped parser with some operators
     */
-  implicit def operators[A](p: Parser[A]) = ParserOps[A](p)
+  implicit def operators[A](p: Parser[A]): ParserOps[A] = ParserOps[A](p)
 
   /**
     * Builds a parser using the function and converts it to a ParserOps value directly.
@@ -173,7 +176,7 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser
     */
   def map[A, B](p: Parser[A])(f: A => B): Parser[B] =
-  p flatMap (a => succeed(f(a)))
+  p flatMap (a => success(f(a)))
 
   /**
     * Parses the input string using two parses. If both of them succeed, apply the function to the two results,
@@ -192,12 +195,20 @@ trait Parsers[Parser[+_]] { self =>
   } yield f(a, b)
 
   /**
-    * aliase of succeed
-    * @param a the result value
-    * @tparam A the result type
-    * @return a parser will always succeed
+    * a parser will always parse a unit value as it's result
     */
-  def unit[A](a: A): Parser[A] = succeed(a)
+  val unit: Parser[Unit] = success(())
+
+  /**
+    * create a parser that representing a result
+    * @param res the result
+    * @tparam A successful result type
+    * @return a parser
+    */
+  def fromTry[A](res: util.Try[A]): Parser[A] = res match {
+    case util.Success(a) => success(a)
+    case util.Failure(t) => failure(t.getMessage)
+  }
 
   /**
     * Parses the input string using the first parser, then parses the remain string with the second parser,
@@ -262,7 +273,7 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser
     */
   def filter[A](p: Parser[A])(pre: A => Boolean): Parser[A] =
-  p.flatMap(x => if (pre(x)) succeed(x) else failure("fail of filter"))
+  p.flatMap(x => if (pre(x)) success(x) else failure("fail of filter"))
 
   /**
     * Parses the input string with the given parser,
@@ -322,7 +333,7 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser of list
     */
   def sep[A](p: Parser[A])(separator: Parser[Any]): Parser[List[A]] =
-  sep1(p)(separator) | succeed(Nil)
+  sep1(p)(separator) | success(Nil)
 
   /**
     * parser for a letter char
@@ -381,7 +392,7 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser
     */
   def maySkipLeft[R](pl: Parser[Any], pr: Parser[R]): Parser[R] = for {
-    _ <- pl | succeed(())
+    _ <- pl | success(())
     r <- pr
   } yield r
 
@@ -396,7 +407,7 @@ trait Parsers[Parser[+_]] { self =>
     */
   def maySkipRight[L](pl: Parser[L], pr: Parser[Any]): Parser[L] = for {
     l <- pl
-    _ <- pr | succeed(())
+    _ <- pr | success(())
   } yield l
 
   /**
