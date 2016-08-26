@@ -481,6 +481,7 @@ trait Parsers[Parser[+_]] { self =>
     def **[B](pb: Parser[B]) = self.product(p, pb)
     def flatMap[B](f: A => Parser[B]): Parser[B] = self.flatMap(p)(f)
     def attempt: Parser[A] = self.attempt(p)
+    def ? : Parser[A] = self.attempt(p)
     def >>[B](p2: Parser[B]): Parser[B] = self.skipLeft(p, p2)
     def <<(p2: Parser[Any]): Parser[A] = self.skipRight(p, p2)
     def surroundedBy(pl: Parser[Any], pr: Parser[Any]): Parser[A] = self.surround(p)(pl, pr)
