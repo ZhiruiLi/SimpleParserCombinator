@@ -58,7 +58,7 @@ object SimpleParsers extends Parsers[Parser] {
     else {
       val originalS = beautifyString(current.substring(0, Math.min(s.length, current.length)))
       Failure(state.toError("string",
-        s"require '$s', but found '$originalS'"
+        s"require '${beautifyString(s)}', but found '$originalS'"
       ))
     }
   }

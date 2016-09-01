@@ -392,7 +392,7 @@ trait Parsers[Parser[+_]] { self =>
     * @return a parser
     */
   def maySkipLeft[R](pl: Parser[Any], pr: Parser[R]): Parser[R] = for {
-    _ <- pl | success(())
+    _ <- pl.attempt | success(())
     r <- pr
   } yield r
 
@@ -407,7 +407,7 @@ trait Parsers[Parser[+_]] { self =>
     */
   def maySkipRight[L](pl: Parser[L], pr: Parser[Any]): Parser[L] = for {
     l <- pl
-    _ <- pr | success(())
+    _ <- pr.attempt | success(())
   } yield l
 
   /**
