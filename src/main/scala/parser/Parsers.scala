@@ -133,6 +133,15 @@ trait Parsers[Parser[+_]] { self =>
   implicit def operators[A](p: Parser[A]): ParserOps[A] = ParserOps[A](p)
 
   /**
+    * Only success if pa success and the follower not success
+    * @param pa the parser
+    * @param follower the parser after pa, should not success
+    * @tparam A the result type of the parser
+    * @return a parser of type A
+    */
+  def notFollow[A](pa: Parser[A], follower: Parser[Any]): Parser[A]
+
+  /**
     * Builds a parser using the function and converts it to a ParserOps value directly.
     * @param a the material to build a parser
     * @param converter the function to create a parser
@@ -496,6 +505,7 @@ trait Parsers[Parser[+_]] { self =>
     def sepBy1(separator: Parser[Any]): Parser[List[A]] = self.sep1(p)(separator)
     def ?>>[B](p2: Parser[B]): Parser[B] = self.maySkipLeft(p, p2)
     def <<?(p2: Parser[Any]): Parser[A] = self.maySkipRight(p, p2)
+    def notFollowedBy(p2: Parser[Any]): Parser[A] = self.notFollow(p, p2)
   }
 }
 

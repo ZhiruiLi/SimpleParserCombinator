@@ -170,4 +170,19 @@ object SimpleParsers extends Parsers[Parser] {
     }
   }
 
+  def notFollow[A](pa: Parser[A], follower: Parser[Any]): Parser[A] = state => {
+    pa(state) match {
+      case s@Success(a, s1) =>
+        val newState = state.moveForward(s1.length)
+        follower(newState) match {
+          case Success(_, s2) =>
+            Failure(newState.toError(
+              "not follow",
+              s"'${beautifyString(s1)}' should not followed by '${beautifyString(s2)}'"))
+          case Failure(_) => s
+        }
+      case f@Failure(_) => f
+    }
+  }
+
 }
