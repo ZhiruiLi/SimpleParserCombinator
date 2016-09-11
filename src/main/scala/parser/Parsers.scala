@@ -36,7 +36,7 @@ trait Parsers[Parser[+_]] { self =>
     * @tparam A the return type of the parser
     * @return a parser of List[A]
     */
-  def many[A](p: Parser[A]): Parser[List[A]] = or(many1(p), success(Nil))
+  def many[A](p: Parser[A]): Parser[List[A]] = many1(p).attempt | success(Nil)
 
   /**
     * Parse the input using the given without consuming any input
