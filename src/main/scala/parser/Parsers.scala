@@ -39,11 +39,12 @@ trait Parsers[Parser[+_]] { self =>
   def many[A](p: Parser[A]): Parser[List[A]] = or(many1(p), success(Nil))
 
   /**
-    * Reads a n-length string from the input without consuming the input string.
-    * @param n number of chars to look ahead
+    * Parse the input using the given without consuming any input
+    * @param p  the original parser
+    * @tparam A the result type
     * @return a parser that parse the input string but do not consume it
     */
-  def lookAhead(n: Int): Parser[String]
+  def lookAhead[A](p: Parser[A]): Parser[A]
 
   /**
     * If p1 fails, then try to parse using p2
@@ -471,6 +472,14 @@ trait Parsers[Parser[+_]] { self =>
     s1 <- parseUntil(s)
     s2 <- string(s)
   } yield s1 + s2).labelError("parseTo", s"can't find string '$s'")
+
+  /**
+    * Parsing will succeed if the head char of input string is one of char in the given string.
+    * @param s a string containing all possible chars
+    * @return a parser
+    */
+  def oneOf(s: String): Parser[Char] =
+    item.filter(s contains _).labelError("oneOf", s"None of char in '$s' matches input.")
 
   /**
     * a wrapper provide some operators to parsers

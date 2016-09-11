@@ -102,12 +102,6 @@ object SimpleParsers extends Parsers[Parser] {
     }
   }
 
-  def lookAhead(n: Int): Parser[String] = state => {
-    val current = state.currentInput
-    if (current.length < n)
-      Failure(state.toError("lookAhead", s"length of input string is less than $n"))
-    else Success(current.substring(0, n), "")
-  }
 
   def or[A](p1: Parser[A], p2: => Parser[A]): Parser[A] = state => {
     p1(state) match {
@@ -185,4 +179,10 @@ object SimpleParsers extends Parsers[Parser] {
     }
   }
 
+  def lookAhead[A](p: Parser[A]): Parser[A] = state => {
+    p(state) match {
+      case Success(a, _) => Success(a, "")
+      case f@Failure(_) => f
+    }
+  }
 }
